@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Gestao financeira e operacional da confeccao">
+  <title>Ateliê | Controle da Confecção</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="toast" class="toast" role="status"></div>
+  <div id="auth-view" class="auth-layout"><section class="auth-brand"><span class="eyebrow">ATELIÊ OPERATIONS</span><h1>Controle claro para uma produção que não para.</h1><p>Finanças, equipe e estoque em um único painel de trabalho.</p></section><section id="auth-card" class="auth-card"></section></div>
+  <div id="app-view" class="app-shell hidden">
+    <aside class="sidebar"><div class="brand-mark"><span class="brand-icon">A</span><div><strong>Ateliê</strong><small>Operations</small></div></div><div id="user-box" class="user-box"></div><nav id="nav"></nav><button id="logout" class="logout">Sair da conta <span>↗</span></button></aside>
+    <main class="content"><header class="topbar"><div><span class="eyebrow" id="section-kicker">VISÃO GERAL</span><h2 id="page-title">Resumo</h2></div><div id="week-label" class="period period-picker"></div></header><div id="app"></div></main>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

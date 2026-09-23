@@ -1,0 +1,9 @@
+{
+  "name": "controle-confeccao",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Controle financeiro e operacional para confeccoes",
+  "scripts": {
+    "start": "node backend/server.js"
+  }
+}

@@ -10,7 +10,7 @@ const PUBLIC = path.join(ROOT, 'frontend');
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 const DEMO_USER = { id: 'demo-user', name: 'Usuário Teste', email: 'teste@atelie.local' };
-const DEFAULT_STATE = { vendas: [], pagamentos: [], compras: [], estoque: [], costureiras: [], log: [] };
+const DEFAULT_STATE = { vendas: [], pagamentos: [], compras: [], outrosGastos: [], estoque: [], costureiras: [], log: [] };
 const sessions = new Map();
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -23,6 +23,7 @@ const body = req => new Promise((resolve, reject) => { let raw = ''; req.on('dat
 const hash = (password, salt = crypto.randomBytes(16).toString('hex')) => ({ salt, hash: crypto.scryptSync(password, salt, 64).toString('hex') });
 const token = () => crypto.randomBytes(32).toString('hex');
 const userFrom = req => { const value = req.headers.authorization || ''; return sessions.get(value.replace('Bearer ', '')); };
+const firebaseUserFrom = req => { const value = req.headers.authorization || ''; const auth = value.replace('Bearer ', ''); if (!auth.startsWith('firebase:')) return null; const uid = auth.replace('firebase:', ''); return { id: uid, name: 'Usuário Firebase', email: `${uid}@firebase.local` }; };
 const serve = (req, res) => { const requested = req.url === '/' ? '/index.html' : req.url; const file = path.normalize(path.join(PUBLIC, requested)); if (!file.startsWith(PUBLIC)) return res.writeHead(403).end(); fs.readFile(file, (err, data) => { if (err) return res.writeHead(404).end('Not found'); const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8' }; res.writeHead(200, { 'Content-Type': types[path.extname(file)] || 'application/octet-stream' }); res.end(data); }); };
 
 const server = http.createServer(async (req, res) => {
@@ -52,7 +53,7 @@ const server = http.createServer(async (req, res) => {
       const auth = token(); sessions.set(auth, user); return json(res, 200, { token: auth, user: { id: user.id, name: user.name, email: user.email }, state: db.states[user.id] });
     }
     const demoRequest = req.headers.authorization === 'Bearer demo-token';
-    const user = demoRequest ? DEMO_USER : userFrom(req);
+    const user = demoRequest ? DEMO_USER : (userFrom(req) || firebaseUserFrom(req));
     if (!user) return json(res, 401, { error: 'Sessao expirada.' });
     if (req.method === 'GET' && req.url === '/api/state') {
       const db = readDb();
@@ -62,8 +63,8 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === 'PUT' && req.url === '/api/state') {
       const db = readDb();
-      db.states[user.id] = await body(req);
       if (!db.states[user.id]) db.states[user.id] = JSON.parse(JSON.stringify(DEFAULT_STATE));
+      db.states[user.id] = await body(req);
       writeDb(db);
       return json(res, 200, db.states[user.id]);
     }

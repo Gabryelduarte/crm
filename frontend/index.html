@@ -5,6 +5,8 @@
   <meta name="description" content="Gestao financeira e operacional da confeccao">
   <title>Ateliê | Controle da Confecção</title>
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/inventory.css">
+  <link rel="stylesheet" href="/responsive.css">
 </head>
 <body>
   <div id="toast" class="toast" role="status"></div>
@@ -13,6 +15,6 @@
     <aside class="sidebar"><div class="brand-mark"><span class="brand-icon">A</span><div><strong>Ateliê</strong><small>Operations</small></div></div><div id="user-box" class="user-box"></div><nav id="nav"></nav><button id="logout" class="logout">Sair da conta <span>↗</span></button></aside>
     <main class="content"><header class="topbar"><div><span class="eyebrow" id="section-kicker">VISÃO GERAL</span><h2 id="page-title">Resumo</h2></div><div id="week-label" class="period period-picker"></div></header><div id="app"></div></main>
   </div>
-  <script src="/app.js"></script>
+  <script type="module" src="/app.js"></script>
 </body>
 </html>

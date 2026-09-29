@@ -33,6 +33,7 @@ let state = { vendas: [], pagamentos: [], compras: [], outrosGastos: [], estoque
 let user = JSON.parse(localStorage.getItem('atelier_user') || 'null');
 let authToken = localStorage.getItem('atelier_token');
 let tab = 'resumo';
+let stockSizeFilter = '';
 let weekStart = monday(new Date());
 const today = dateValue(new Date());
 let reportStart = today;
@@ -74,6 +75,7 @@ const inDateRange = value => {
 const stampEditor = item => ({ ...item, updatedBy: user?.name || 'Sistema', updatedAt: new Date().toISOString() });
 const editorBadge = item => item?.updatedBy ? `<span class="edited-tag">Editado por ${esc(item.updatedBy)}</span>` : '';
 const productKey = name => String(name || '').trim().toLocaleLowerCase('pt-BR');
+const stockUnitValue = item => Number(item.valorUnitario || 0) + (String(item.tamanho || '').toUpperCase() === 'XL' ? 10 : 0);
 
 function normalizeState(value) {
   const normalized = {
@@ -395,12 +397,17 @@ function transactionView(kind, title, fields, items) {
 
 function inventoryView() {
   const products = new Map();
-  state.estoque.forEach(item => {
+  const visibleStock = stockSizeFilter
+    ? state.estoque.filter(item => String(item.tamanho || '').toUpperCase() === stockSizeFilter)
+    : state.estoque;
+  visibleStock.forEach(item => {
     const key = productKey(item.nome);
     if (!products.has(key)) products.set(key, []);
     products.get(key).push(item);
   });
   const sizeOrder = new Map(tamanhos.map((size, index) => [size, index]));
+  const pieceCount = visibleStock.reduce((sum, item) => sum + Number(item.qtd || 0), 0);
+  const inventoryValue = visibleStock.reduce((sum, item) => sum + Number(item.qtd || 0) * stockUnitValue(item), 0);
 
   return `
     <section class="panel">
@@ -408,6 +415,7 @@ function inventoryView() {
       <form class="form-grid" data-add="estoque">
         ${field('Produto', 'nome')}
         ${field('Estoque mínimo por tamanho', 'min', 'number', '0')}
+        <label class="field">Valor base por peça (XL + R$ 10)<input name="valorUnitario" type="number" min="0" step="0.01" value="0" required></label>
         <div class="size-quantity-grid">
           ${tamanhos.map(size => `<label class="field">${size}<input name="qtd_${size}" type="number" min="0" step="1" value="0" required></label>`).join('')}
         </div>
@@ -416,7 +424,19 @@ function inventoryView() {
       </form>
     </section>
     <section class="panel">
-      <div class="panel-heading"><strong>Inventário</strong><small>${state.estoque.reduce((sum, item) => sum + Number(item.qtd || 0), 0)} peças</small></div>
+      <div class="panel-heading inventory-heading">
+        <strong>Inventário</strong>
+        <label class="inventory-size-filter">Filtrar tamanho
+          <select name="stock-size-filter" aria-label="Filtrar estoque por tamanho">
+            <option value="" ${stockSizeFilter ? '' : 'selected'}>Todos</option>
+            ${tamanhos.map(size => `<option value="${size}" ${stockSizeFilter === size ? 'selected' : ''}>${size}</option>`).join('')}
+          </select>
+        </label>
+      </div>
+      <div class="inventory-value-report">
+        <div><small>${stockSizeFilter ? `Valor total em ${stockSizeFilter}` : 'Valor total das roupas em estoque'}</small><strong>${money(inventoryValue)}</strong></div>
+        <div><small>Peças disponíveis</small><strong>${pieceCount}</strong></div>
+      </div>
       ${[...products.entries()].map(([, items]) => {
         const model = items[0];
         const sizes = items.slice().sort((a, b) => (sizeOrder.get(a.tamanho) ?? 99) - (sizeOrder.get(b.tamanho) ?? 99));
@@ -433,10 +453,13 @@ function inventoryView() {
                   <div class="stock-size-row">
                     <strong>${esc(item.tamanho || '—')}</strong>
                     <span class="${item.qtd <= item.min ? 'stock-low' : ''}">${item.qtd} un.</span>
+                    <span class="stock-unit-price" title="Valor unitário aplicado">${money(stockUnitValue(item))}/un.</span>
                     <small>Mín. ${item.min}</small>
-                    <button class="secondary" title="Diminuir ${esc(item.tamanho)}" aria-label="Diminuir ${esc(item.tamanho)} de ${esc(item.nome)}" data-stock="${item.id}:-1">−</button>
-                    <button class="secondary" title="Aumentar ${esc(item.tamanho)}" aria-label="Aumentar ${esc(item.tamanho)} de ${esc(item.nome)}" data-stock="${item.id}:1">+</button>
-                    <button class="icon-button" title="Remover tamanho ${esc(item.tamanho)}" aria-label="Remover tamanho ${esc(item.tamanho)} de ${esc(item.nome)}" data-delete="estoque:${item.id}">×</button>
+                    <div class="stock-size-actions">
+                      <button class="secondary" title="Diminuir ${esc(item.tamanho)}" aria-label="Diminuir ${esc(item.tamanho)} de ${esc(item.nome)}" data-stock="${item.id}:-1">−</button>
+                      <button class="secondary" title="Aumentar ${esc(item.tamanho)}" aria-label="Aumentar ${esc(item.tamanho)} de ${esc(item.nome)}" data-stock="${item.id}:1">+</button>
+                      <button class="icon-button" title="Remover tamanho ${esc(item.tamanho)}" aria-label="Remover tamanho ${esc(item.tamanho)} de ${esc(item.nome)}" data-delete="estoque:${item.id}">×</button>
+                    </div>
                   </div>
                 `).join('')}
               </div>
@@ -444,7 +467,7 @@ function inventoryView() {
             </div>
           </div>
         `;
-      }).join('') || '<div class="list-empty">Cadastre o primeiro produto.</div>'}
+      }).join('') || `<div class="list-empty">${stockSizeFilter ? `Nenhuma peça no tamanho ${stockSizeFilter}.` : 'Cadastre o primeiro produto.'}</div>`}
     </section>
   `;
 }
@@ -556,6 +579,7 @@ function bindActions() {
           if (existing) {
             existing.qtd = Number(existing.qtd || 0) + quantity;
             existing.min = Number(values.min || 0);
+            existing.valorUnitario = Number(values.valorUnitario || 0);
             existing.foto = foto || existing.foto || '';
             existing.contado = today;
             Object.assign(existing, stampEditor(existing));
@@ -566,6 +590,7 @@ function bindActions() {
               tamanho: size,
               qtd: quantity,
               min: Number(values.min || 0),
+              valorUnitario: Number(values.valorUnitario || 0),
               foto,
               data: today,
               em: new Date().toISOString(),
@@ -640,6 +665,11 @@ function bindActions() {
       await save();
       render();
     });
+  });
+
+  document.querySelector('[name="stock-size-filter"]')?.addEventListener('change', event => {
+    stockSizeFilter = event.target.value;
+    render();
   });
 }
 

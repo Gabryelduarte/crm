@@ -760,6 +760,12 @@ function productionView() {
       <form class="form-grid production-form" data-add="emProducao">
         <label class="field">Produto<input name="nome" list="production-products" autocomplete="off" required></label>
         <datalist id="production-products">${productNames.map(name => `<option value="${esc(name)}">`).join('')}</datalist>
+        <label class="field">Tamanho
+          <select name="tamanho" required>
+            <option value="">Selecione</option>
+            ${tamanhos.map(size => `<option value="${size}">${size}</option>`).join('')}
+          </select>
+        </label>
         <label class="field">Quantidade<input name="qtd" type="number" min="1" step="1" required></label>
         ${field('Costureira', 'costureira')}
         ${field('Início', 'dataInicio', 'date', today)}
@@ -796,6 +802,7 @@ function productionView() {
                     <button class="icon-button" title="Remover da produção" aria-label="Remover ${esc(item.nome)} da produção" data-delete="emProducao:${item.id}">×</button>
                   </div>
                   <div class="production-card-details">
+                    <span>Tamanho ${esc(item.tamanho || 'Não informado')}</span>
                     <span>${Number(item.qtd || 0)} peças</span>
                     <span>${esc(item.costureira || 'Sem costureira')}</span>
                     ${item.dataInicio ? `<span>Início: ${formatDate(new Date(item.dataInicio + 'T12:00:00'))}</span>` : ''}
@@ -1101,10 +1108,11 @@ function bindActions() {
       const values = Object.fromEntries(new FormData(form));
       if (type === 'emProducao') {
         const nome = String(values.nome || '').trim();
+        const tamanho = String(values.tamanho || '').toUpperCase();
         const qtd = Number(values.qtd);
         const dataInicio = values.dataInicio || today;
-        if (!nome || !Number.isInteger(qtd) || qtd < 1) {
-          showToast('Informe um produto e uma quantidade válida.');
+        if (!nome || !tamanhos.includes(tamanho) || !Number.isInteger(qtd) || qtd < 1) {
+          showToast('Informe um produto, tamanho e quantidade válidos.');
           return;
         }
         if (values.previsao && values.previsao < dataInicio) {
@@ -1115,6 +1123,7 @@ function bindActions() {
         state.emProducao.push(stampEditor({
           id: crypto.randomUUID(),
           nome,
+          tamanho,
           qtd,
           costureira: String(values.costureira || '').trim(),
           dataInicio,

@@ -2,6 +2,10 @@
 
 Aplicacao de controle financeiro e operacional para confeccoes.
 
+A aba **Em produção** permite registrar produto, quantidade, costureira, início, previsão de entrega e etapa (Aguardando, Em produção ou Concluído). Os indicadores destacam ordens abertas, peças em aberto e ordens atrasadas. A conclusão da produção não altera o estoque automaticamente.
+
+No **Estoque**, cada modelo pode ser editado para trocar o nome, atualizar o valor base ou adicionar um tamanho ainda não cadastrado. Novos tamanhos começam com quantidade zero.
+
 ## Estrutura
 
 - `frontend/`: interface, estilos e regras de apresentacao.

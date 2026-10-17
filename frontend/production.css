@@ -1,0 +1,11 @@
+.production-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+.production-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;align-items:start}
+.production-lane{min-width:0}
+.production-card{border:1px solid var(--line);border-radius:5px;padding:14px;margin-top:10px;background:#fbfcfb}
+.production-card-heading{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.production-card-heading strong{overflow-wrap:anywhere}
+.production-card-details{display:grid;gap:6px;color:var(--muted);font-size:12px;margin:8px 0 12px}
+.production-status-field{display:grid;gap:6px;color:var(--muted);font-size:12px;font-weight:600}
+.production-status-field select,.production-form select{width:100%;min-width:0;border:1px solid var(--line);border-radius:4px;padding:9px 10px;background:var(--surface);color:var(--ink)}
+@media(max-width:1000px){.production-board{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.production-board,.production-metrics{grid-template-columns:1fr}}

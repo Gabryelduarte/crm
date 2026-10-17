@@ -10,7 +10,7 @@ const PUBLIC = path.join(ROOT, 'frontend');
 const DATA_DIR = path.join(__dirname, 'data');
 const DATA_FILE = path.join(DATA_DIR, 'db.json');
 const DEMO_USER = { id: 'demo-user', name: 'Usuário Teste', email: 'teste@atelie.local' };
-const DEFAULT_STATE = { vendas: [], pagamentos: [], compras: [], outrosGastos: [], estoque: [], costureiras: [], log: [] };
+const DEFAULT_STATE = { vendas: [], emProducao: [], pagamentos: [], compras: [], outrosGastos: [], estoque: [], costureiras: [], log: [] };
 const sessions = new Map();
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -42,7 +42,7 @@ const server = http.createServer(async (req, res) => {
       const credentials = hash(payload.password);
       const user = { id: crypto.randomUUID(), name: String(payload.name).trim(), email: normalized, ...credentials };
       db.users.push(user);
-      db.states[user.id] = { vendas: [], pagamentos: [], compras: [], estoque: [], costureiras: [], log: [] };
+      db.states[user.id] = { vendas: [], emProducao: [], pagamentos: [], compras: [], estoque: [], costureiras: [], log: [] };
       writeDb(db);
 
       const auth = token(); sessions.set(auth, user); return json(res, 201, { token: auth, user: { id: user.id, name: user.name, email: user.email }, state: db.states[user.id] });

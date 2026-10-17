@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isSharedMember(ownerId) {
+      let accessPath = /databases/$(database)/documents/userStates/$(ownerId)/access/permissions;
+      return isAuthenticated()
+        && request.auth.uid != ownerId
+        && request.auth.token.email_verified == true
+        && request.auth.token.email is string
+        && exists(accessPath)
+        && request.auth.token.email in get(accessPath).data.memberEmails;
+    }
+
+    function uidUnchanged(userId) {
+      return request.resource.data.ownerUid is string
+        && request.resource.data.ownerUid == userId;
+    }
+
+    function uidNotModified() {
+      return request.resource.data.ownerUid == resource.data.ownerUid;
+    }
+
+    function hasRequiredFields(data, fields) {
+      return data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(data, fields) {
+      return data.keys().hasOnly(fields);
+    }
+
+    function isBoundedList(data, field) {
+      return data[field] is list && data[field].size() <= 1000;
+    }
+
+    function isValidState(userId) {
+      let data = request.resource.data;
+      let state = data.state;
+      return hasRequiredFields(data, ['ownerUid', 'state', 'updatedAt'])
+        && hasOnlyAllowedFields(data, ['ownerUid', 'state', 'updatedAt'])
+        && uidUnchanged(userId)
+        && data.updatedAt is timestamp
+        && state is map
+        && hasRequiredFields(state, [
+          'vendas', 'emProducao', 'pagamentos', 'compras', 'outrosGastos', 'estoque',
+          'custosFabricacao', 'costureiras', 'log'
+        ])
+        && hasOnlyAllowedFields(state, [
+          'vendas', 'emProducao', 'pagamentos', 'compras', 'outrosGastos', 'estoque',
+          'custosFabricacao', 'costureiras', 'log'
+        ])
+        && isBoundedList(state, 'vendas')
+        && isBoundedList(state, 'emProducao')
+        && isBoundedList(state, 'pagamentos')
+        && isBoundedList(state, 'compras')
+        && isBoundedList(state, 'outrosGastos')
+        && isBoundedList(state, 'estoque')
+        && isBoundedList(state, 'custosFabricacao')
+        && isBoundedList(state, 'costureiras')
+        && isBoundedList(state, 'log');
+    }
+
+    function isValidPermissions(ownerId) {
+      let data = request.resource.data;
+      return hasRequiredFields(data, ['ownerUid', 'memberEmails', 'updatedAt'])
+        && hasOnlyAllowedFields(data, ['ownerUid', 'memberEmails', 'updatedAt'])
+        && data.ownerUid == ownerId
+        && data.memberEmails is list
+        && data.memberEmails.size() <= 50
+        && data.updatedAt is timestamp;
+    }
+
+    match /userStates/{userId} {
+      allow get: if isOwner(userId) || isSharedMember(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && isValidState(userId);
+      allow update: if (isOwner(userId) || isSharedMember(userId))
+        && uidNotModified()
+        && isValidState(userId);
+      allow delete: if false;
+
+      match /access/{accessId} {
+        allow get: if accessId == 'permissions' && isOwner(userId);
+        allow list: if false;
+        allow create: if accessId == 'permissions'
+          && isOwner(userId)
+          && isValidPermissions(userId);
+        allow update: if accessId == 'permissions'
+          && isOwner(userId)
+          && resource.data.ownerUid == userId
+          && request.resource.data.ownerUid == resource.data.ownerUid
+          && isValidPermissions(userId);
+        allow delete: if false;
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
